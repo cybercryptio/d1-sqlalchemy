@@ -19,7 +19,7 @@ The supported databases are:
 
 
 ## Usage
-When creating a table, the data type `D1EncryptedType` can be assigned to a column which will ensure that the data in that column is encrypted and decrypted on the way in and out of the database, respectively. In the example below, the column `last_name` in the table `person` will be encrypted before stored in the database:
+When creating a table, the data type `D1EncryptedType` can be assigned to a column which will ensure that the data in that column is encrypted and decrypted on the way in and out of the database, respectively. In the example below, the column `last_name` in the table `person` will be encrypted before being stored in the database:
 
 ```python
 class Person(Base):
