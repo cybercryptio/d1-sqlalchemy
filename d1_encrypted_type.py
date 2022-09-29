@@ -8,6 +8,8 @@ from sqlalchemy import String, TypeDecorator
 from sqlalchemy_utils.types.json import JSONType
 from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
+UUID_LENGTH = 36
+
 
 class D1EncryptedType(TypeDecorator, ScalarCoercible):
     """
@@ -64,8 +66,8 @@ class D1EncryptedType(TypeDecorator, ScalarCoercible):
     def process_result_value(self, value, dialect):
         """Decrypt value on the way out."""
         if value is not None:
-            object_id = value[:36]
-            ciphertext = base64.b64decode(value[36:])
+            object_id = value[:UUID_LENGTH]
+            ciphertext = base64.b64decode(value[UUID_LENGTH:])
             decrypted_value = self.client.decrypt(
                 ciphertext, object_id, self.access_token)
 

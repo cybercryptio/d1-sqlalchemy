@@ -21,57 +21,62 @@ uid = os.environ['D1_UID']
 password = os.environ['D1_PASS']
 endpoint = os.environ['D1_ENDPOINT']
 
-client = generic.GenericClient(grpc.insecure_channel(endpoint))
-response = client.login_user(uid, password)
-
 Base = declarative_base()
 
 
 class Person(Base):
     __tablename__ = "person"
+
     id = Column(Integer, primary_key=True)
     first_name = Column(String)
-    last_name = Column(D1EncryptedType(
-        client=client, access_token=response.access_token))
+
+    def __init__(self, client, access_token):
+        self.last_name = Column(D1EncryptedType(
+            client=client, access_token=access_token))
 
 
 def main():
     # setup
-    engine = create_engine('sqlite:///:memory:')
-    connection = engine.connect()
+    with grpc.insecure_channel(endpoint) as channel:
+        client = generic.GenericClient(channel)
+        response = client.login_user(uid, password)
 
-    sa.orm.configure_mappers()
-    Base.metadata.create_all(connection)
+        engine = create_engine('sqlite:///:memory:')
+        connection = engine.connect()
 
-    # create a configured "Session" class
-    Session = sessionmaker(bind=connection)
+        sa.orm.configure_mappers()
+        Base.metadata.create_all(connection)
 
-    # create a Session
-    session = Session()
+        # create a configured "Session" class
+        Session = sessionmaker(bind=connection)
 
-    # example
-    first_name = 'Michael'
-    last_name = bytes('Jackson', 'utf-8')
+        # create a Session
+        session = Session()
 
-    person = Person(first_name=first_name, last_name=last_name)
-    session.add(person)
-    session.commit()
+        # example
+        first_name = 'Michael'
+        last_name = bytes('Jackson', 'utf-8')
 
-    person_id = person.id
+        person = Person(client=client, access_token=response.access_token,
+                        first_name=first_name, last_name=last_name)
+        session.add(person)
+        session.commit()
 
-    session.expunge_all()
+        person_id = person.id
 
-    person_instance = session.query(Person).get(person_id)
+        session.expunge_all()
 
-    print('id: {}'.format(person_instance.id))
-    print('first name: {}'.format(person_instance.first_name))
-    print('last name: {}'.format(person_instance.last_name))
+        person_instance = session.query(Person).get(person_id)
 
-    # teardown
-    close_all_sessions()
-    Base.metadata.drop_all(connection)
-    connection.close()
-    engine.dispose()
+        print('id: {}'.format(person_instance.id))
+        print('first name: {}'.format(person_instance.first_name))
+        print('last name: {}'.format(person_instance.last_name))
+
+        # teardown
+        close_all_sessions()
+        Base.metadata.drop_all(connection)
+        connection.close()
+        engine.dispose()
 
 
 main()
