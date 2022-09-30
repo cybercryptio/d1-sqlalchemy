@@ -8,7 +8,7 @@ from sqlalchemy import Column, Integer, String
 import sqlalchemy as sa
 from d1_generic import generic
 from sqlalchemy.orm.session import close_all_sessions
-from d1_encrypted_type import D1EncryptedType
+from d1_encrypted_type import D1EncryptedType, set_client
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -23,54 +23,58 @@ endpoint = os.environ['D1_ENDPOINT']
 
 Base = declarative_base()
 
-client = generic.GenericClient(grpc.insecure_channel(endpoint))
-client.login_user_set_token(uid, password)
-
 
 class Person(Base):
     __tablename__ = "person"
     id = Column(Integer, primary_key=True)
     first_name = Column(String)
-    last_name = Column(D1EncryptedType(client=client))
+    last_name = Column(D1EncryptedType(String))
 
 
 def main():
     # setup
-    engine = create_engine('sqlite:///:memory:')
-    connection = engine.connect()
+    with grpc.insecure_channel(endpoint) as channel:
+        client = generic.GenericClient(channel)
+        client.login_user_set_token(uid, password)
 
-    sa.orm.configure_mappers()
-    Base.metadata.create_all(connection)
+        # set client
+        set_client(client)
 
-    # create a configured "Session" class
-    Session = sessionmaker(bind=connection)
+        engine = create_engine('sqlite:///:memory:')
+        connection = engine.connect()
 
-    # create a Session
-    session = Session()
+        sa.orm.configure_mappers()
+        Base.metadata.create_all(connection)
 
-    # example
-    first_name = 'Michael'
-    last_name = bytes('Jackson', 'utf-8')
+        # create a configured "Session" class
+        Session = sessionmaker(bind=connection)
 
-    person = Person(first_name=first_name, last_name=last_name)
-    session.add(person)
-    session.commit()
+        # create a Session
+        session = Session()
 
-    person_id = person.id
+        # example
+        first_name = 'Michael'
+        last_name = bytes('Jackson', 'utf-8')
 
-    session.expunge_all()
+        person = Person(first_name=first_name, last_name=last_name)
+        session.add(person)
+        session.commit()
 
-    person_instance = session.query(Person).get(person_id)
+        person_id = person.id
 
-    print('id: {}'.format(person_instance.id))
-    print('first name: {}'.format(person_instance.first_name))
-    print('last name: {}'.format(person_instance.last_name))
+        session.expunge_all()
 
-    # teardown
-    close_all_sessions()
-    Base.metadata.drop_all(connection)
-    connection.close()
-    engine.dispose()
+        person_instance = session.query(Person).get(person_id)
+
+        print('id: {}'.format(person_instance.id))
+        print('first name: {}'.format(person_instance.first_name))
+        print('last name: {}'.format(person_instance.last_name))
+
+        # teardown
+        close_all_sessions()
+        Base.metadata.drop_all(connection)
+        connection.close()
+        engine.dispose()
 
 
 main()

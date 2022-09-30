@@ -10,6 +10,29 @@ from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
 UUID_LENGTH = 36
 
+_d1client = None
+_access_token = None
+
+
+def set_client(client):
+    global _d1client
+    _d1client = client
+
+
+def get_client():
+    global _d1client
+    return _d1client
+
+
+def set_access_token(access_token):
+    global _access_token
+    _access_token = access_token
+
+
+def get_access_token():
+    global _access_token
+    return _access_token
+
 
 class D1EncryptedType(TypeDecorator, ScalarCoercible):
     """
@@ -21,8 +44,6 @@ class D1EncryptedType(TypeDecorator, ScalarCoercible):
 
     def __init__(
         self,
-        client,
-        access_token=None,
         type_in=None,
         **kwargs
     ):
@@ -34,8 +55,6 @@ class D1EncryptedType(TypeDecorator, ScalarCoercible):
         elif isinstance(type_in, type):
             type_in = type_in()
         self.underlying_type = type_in
-        self.access_token = access_token
-        self.client = client
 
     def process_bind_param(self, value, dialect):
         """Encrypt a value on the way in."""
@@ -60,7 +79,7 @@ class D1EncryptedType(TypeDecorator, ScalarCoercible):
                 elif issubclass(type_, JSONType):
                     value = json.dumps(value)
 
-            response = self.client.encrypt(value, self.access_token)
+            response = _d1client.encrypt(value, _access_token)
             return response.object_id + base64.b64encode(response.ciphertext).decode()
 
     def process_result_value(self, value, dialect):
@@ -68,8 +87,8 @@ class D1EncryptedType(TypeDecorator, ScalarCoercible):
         if value is not None:
             object_id = value[:UUID_LENGTH]
             ciphertext = base64.b64decode(value[UUID_LENGTH:])
-            decrypted_value = self.client.decrypt(
-                ciphertext, object_id, self.access_token)
+            decrypted_value = _d1client.decrypt(
+                ciphertext, object_id, _access_token)
 
             try:
                 return self.underlying_type.process_result_value(
