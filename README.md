@@ -26,13 +26,13 @@ class Person(Base):
     __tablename__ = "person"
     id = Column(Integer, primary_key=True)
     first_name = Column(String)
-    last_name = Column(D1EncryptedType(client=<generic_client>))
+    last_name = Column(D1EncryptedType)
 ```
 
 
 ## Limitations
 
-- Currently only `[]byte` data fields can be encrypted.
+- Currently only byte array and string data fields can be encrypted.
 - Encrypted data is not searchable by the database.
 
 ## License

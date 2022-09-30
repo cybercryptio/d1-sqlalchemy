@@ -29,7 +29,7 @@ class Person(Base):
 
     id = Column(Integer, primary_key=True)
     first_name = Column(String)
-    last_name = Column(D1EncryptedType(String))
+    last_name = Column(D1EncryptedType)
 
 
 def main():
@@ -56,7 +56,8 @@ def main():
 
         # example
         first_name = 'Michael'
-        last_name = bytes('Jackson', 'utf-8')
+        last_name = str.encode('Jackson')
+        #last_name = 'Jackson'
 
         person = Person(first_name=first_name, last_name=last_name)
 
