@@ -32,6 +32,7 @@ class Person(Base):
 
 ## Limitations
 
+- The user can only login using `login_user_set_token` and not `login_user` from the Python client API as the access token cannot be passed directly to the encrypt- and decrypt requests in `D1EncryptedType`.
 - Currently only byte array and string data fields can be encrypted.
 - Encrypted data is not searchable by the database.
 

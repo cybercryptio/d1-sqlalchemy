@@ -8,7 +8,7 @@ from sqlalchemy import Column, Integer, String
 import sqlalchemy as sa
 from d1_generic import generic
 from sqlalchemy.orm.session import close_all_sessions
-from d1_encrypted_type import D1EncryptedType, set_access_token, set_client
+from d1_encrypted_type import D1EncryptedType, set_client
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -26,7 +26,6 @@ Base = declarative_base()
 
 class Person(Base):
     __tablename__ = "person"
-
     id = Column(Integer, primary_key=True)
     first_name = Column(String)
     last_name = Column(D1EncryptedType)
@@ -36,11 +35,10 @@ def main():
     # setup
     with grpc.insecure_channel(endpoint) as channel:
         client = generic.GenericClient(channel)
-        response = client.login_user(uid, password)
+        client.login_user_set_token(uid, password)
 
-        # set client and access token
+        # set client
         set_client(client)
-        set_access_token(response.access_token)
 
         engine = create_engine('sqlite:///:memory:')
         connection = engine.connect()
@@ -57,10 +55,9 @@ def main():
         # example
         first_name = 'Michael'
         last_name = str.encode('Jackson')
-        #last_name = 'Jackson'
+        # last_name = 'Jackson'
 
         person = Person(first_name=first_name, last_name=last_name)
-
         session.add(person)
         session.commit()
 
