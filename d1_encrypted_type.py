@@ -2,12 +2,10 @@
 import base64
 
 from sqlalchemy import String, TypeDecorator
-from sqlalchemy_utils.types.scalar_coercible import ScalarCoercible
 
 UUID_LENGTH = 36
 
 _d1client = None
-_access_token = None
 
 
 def set_client(client):
@@ -20,13 +18,12 @@ def get_client():
     return _d1client
 
 
-class D1EncryptedType(TypeDecorator, ScalarCoercible):
+class D1EncryptedType(TypeDecorator):
     """
     D1EncryptedType encrypts and decrypts values on their way in and out of
     databases, respectively.
     """
     impl = String
-    cache_ok = True
 
     def __init__(
         self,
@@ -40,7 +37,10 @@ class D1EncryptedType(TypeDecorator, ScalarCoercible):
         if value is not None:
             if type(value) == str:
                 value = str.encode(value)
-            elif type(value) != bytes:
+                self._underlying_type = str
+            elif type(value) == bytes:
+                self._underlying_type = bytes
+            else:
                 raise TypeError('Data type must be byte array or string.')
 
             response = _d1client.encrypt(value)
@@ -54,4 +54,10 @@ class D1EncryptedType(TypeDecorator, ScalarCoercible):
             decrypted_value = _d1client.decrypt(
                 ciphertext, object_id)
 
-            return decrypted_value.plaintext.decode()
+            if self._underlying_type == str:
+                return decrypted_value.plaintext.decode()
+            elif self._underlying_type == bytes:
+                return decrypted_value.plaintext
+            else:
+                raise TypeError(
+                    'No in- and output data type has been recognized.')
